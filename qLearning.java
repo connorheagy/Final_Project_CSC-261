@@ -10,8 +10,9 @@
         private int numSimulations; //number of simulations
         private int numEpisodes; // number of episodes
         double[][] simulationResults = new double[NUMSIMULATIONS][NUMEPISODES];
-        
-        private final double[][] qTable;  // Q-table: state × action
+        public boolean useA = true;
+        private final double[][] qTableA;  // Q-table: state × action
+        private final double[][] qTableB;
         private final int[] actions = {1, -1, 4, -4};  // right, left, down, up
         
     
@@ -21,7 +22,8 @@
             this.epsilon = epsilon;
             this.numSimulations = simulations;
             this.numEpisodes = episodes;
-            this.qTable = new double[SIZE][actions.length];
+            this.qTableA = new double[SIZE][actions.length];
+            this.qTableB = new double[SIZE][actions.length];
             //innitialize simulation results
             for(int i = 0; i < numSimulations; i++){
                 for(int j = 0; j < numEpisodes; j++){
@@ -34,7 +36,8 @@
         private void initializeQTable() {
             for (int s = 0; s < SIZE; s++) {//16
                 for (int a = 0; a < actions.length; a++) {//by 4
-                    qTable[s][a] = Math.random() * 0.1;
+                    qTableA[s][a] = Math.random() * 0.1;
+                    qTableB[s][a] = Math.random() * 0.1;
                 }
             }
         }
@@ -50,14 +53,27 @@
         
         private int getBestAction(int state) {
             int bestAction = 0;
-            double bestValue = qTable[state][0];
+            double bestValue = useA ? qTableA[state][0] : qTableB[state][0];
+            //double bestValue = qTable[state][0];
             
             for (int a = 1; a < actions.length; a++) {
-                if (qTable[state][a] > bestValue) {
-                    bestValue = qTable[state][a];
-                    bestAction = a;
+                if (useA) {
+                    if (qTableA[state][a] > bestValue) {
+                        bestValue = qTableA[state][a];
+                        bestAction = a;
+                    }
+                } else {
+                    if (qTableB[state][a] > bestValue) {
+                        bestValue = qTableB[state][a];
+                        bestAction = a;
+                    }
                 }
+                // if (qTable[state][a] > bestValue) {
+                //     bestValue = qTable[state][a];
+                //     bestAction = a;
+                // }
             }
+            useA = !useA;
             return bestAction;
         }
         
@@ -145,22 +161,39 @@
                         // Update total reward per episode
                         /*maybe this is where we can sum for a line graph? */
                         episodeReward += reward;
-    
-                        
+                        double currentQ = useA ? qTableA[state][actionIndex] : qTableB[state][actionIndex]; // show the current q-table
                         // Q-learning update
-                        double currentQ = qTable[state][actionIndex]; // show the current q-table
+                        // double currentQ = qTable[state][actionIndex]; // show the current q-table
     
                         //initialize the next Q, the MAX next Q 
                         double maxNextQ = 0.0; 
                         //next value has to be terminal
-                        if (!isTerminal(nextState)) {
-                            //select bext action based on next state, and best action based on the get best action function 
-                            maxNextQ = qTable[nextState][getBestAction(nextState)];
+                        if (useA) {
+                            if(!isTerminal(nextState)){
+                                //select bext action based on next state, and best action based on the get best action function 
+                                maxNextQ = qTableB[nextState][getBestAction(nextState)];
+                            }
+                        }else {
+                            if (!isTerminal(nextState)){
+                                maxNextQ = qTableA[nextState][getBestAction(nextState)];
+                            }
                         }
+
+                        // if (!isTerminal(nextState)) {
+                        //     //select bext action based on next state, and best action based on the get best action function 
+                        //     maxNextQ = qTable[nextState][getBestAction(nextState)];
+                        // }
                         
                         //the qtable is updated with the central formula
-                        qTable[state][actionIndex] = currentQ + 
-                            currentAlpha * (reward + gamma * maxNextQ - currentQ);
+                        if (useA) {
+                            qTableA[state][actionIndex] = currentQ + 
+                                currentAlpha * (reward + gamma * maxNextQ - currentQ);
+                        } else {
+                            qTableB[state][actionIndex] = currentQ + 
+                                currentAlpha * (reward + gamma * maxNextQ - currentQ);
+                        }
+                        // qTable[state][actionIndex] = currentQ + 
+                        //     currentAlpha * (reward + gamma * maxNextQ - currentQ);
                         
                         //set the next state
                         state = nextState;
