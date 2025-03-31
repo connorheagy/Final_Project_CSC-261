@@ -101,7 +101,7 @@
          * @return Average rewards per episode across all simulations
          */
         public double[][] train( boolean decayEpsilon, boolean decayAlpha) {
-            
+            initializeQTable();// reset or intilisatin the Q-table
             //create a table for simulation results
             
             
